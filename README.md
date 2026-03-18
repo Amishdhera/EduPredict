@@ -122,3 +122,14 @@ python manage.py createsuperuser
 - **Frontend**: Next.js 16, React, Tailwind CSS, Recharts
 - **ML**: XGBoost, scikit-learn
 - **Database**: SQLite (default)
+
+
+
+Django
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+numpy
+pandas
+scikit-learn
+joblib
