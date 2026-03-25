@@ -124,12 +124,6 @@ python manage.py createsuperuser
 - **Database**: SQLite (default)
 
 
+python -m pip install --upgrade pip
 
-Django
-djangorestframework
-djangorestframework-simplejwt
-django-cors-headers
-numpy
-pandas
-scikit-learn
-joblib
+pip install django djangorestframework djangorestframework-simplejwt django-cors-headers numpy pandas scikit-learn joblib xgboost
