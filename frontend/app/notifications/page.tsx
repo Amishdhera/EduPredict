@@ -138,10 +138,9 @@ import {
     ChevronDown,
     ChevronUp,
     Loader2,
-    Settings,
     Mail,
     MailCheck,
-    X
+    RefreshCw
 } from 'lucide-react';
 
 export default function NotificationsPage() {
@@ -150,6 +149,7 @@ export default function NotificationsPage() {
     const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
     const [expandedId, setExpandedId] = useState<number | null>(null);
     const [showFilters, setShowFilters] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         loadNotifications();
@@ -157,11 +157,17 @@ export default function NotificationsPage() {
 
     const loadNotifications = async () => {
         setIsLoading(true);
+        setError(null);
         try {
             const data = await notificationApi.getNotifications();
-            setNotifications(data);
-        } catch (err) {
-            console.error(err);
+            // Ensure data is an array
+            const notificationsArray = Array.isArray(data) ? data : data?.notifications || data?.data || [];
+            setNotifications(notificationsArray);
+        } catch (err: any) {
+            console.error('Failed to load notifications:', err);
+            setError(err.message || 'Failed to load notifications');
+            // Set empty array to prevent filter errors
+            setNotifications([]);
         } finally {
             setIsLoading(false);
         }
@@ -232,13 +238,14 @@ export default function NotificationsPage() {
         }
     };
 
-    const filteredNotifications = notifications.filter(notification => {
+    // Safely filter notifications - ensure it's an array first
+    const filteredNotifications = Array.isArray(notifications) ? notifications.filter(notification => {
         if (filter === 'unread') return !notification.is_read;
         if (filter === 'read') return notification.is_read;
         return true;
-    });
+    }) : [];
 
-    const unreadCount = notifications.filter(n => !n.is_read).length;
+    const unreadCount = Array.isArray(notifications) ? notifications.filter(n => !n.is_read).length : 0;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 py-12 px-4">
@@ -292,6 +299,14 @@ export default function NotificationsPage() {
                                 <MailCheck className="w-4 h-4" />
                                 Mark all read
                             </button>
+
+                            <button
+                                onClick={loadNotifications}
+                                disabled={isLoading}
+                                className="p-2 bg-slate-800/50 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all disabled:opacity-50"
+                            >
+                                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                            </button>
                         </div>
                     </div>
 
@@ -334,6 +349,23 @@ export default function NotificationsPage() {
                     )}
                 </div>
 
+                {/* Error Display */}
+                {error && (
+                    <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3 text-red-400">
+                        <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <p className="text-sm font-medium">Failed to load notifications</p>
+                            <p className="text-sm opacity-90">{error}</p>
+                        </div>
+                        <button
+                            onClick={loadNotifications}
+                            className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-sm"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                )}
+
                 {/* Notifications List */}
                 <div className="space-y-3">
                     {isLoading ? (
@@ -347,11 +379,20 @@ export default function NotificationsPage() {
                                 <Bell className="w-12 h-12 text-slate-600" />
                             </div>
                             <p className="text-slate-400 text-lg font-medium mb-1">No notifications yet</p>
-                            <p className="text-slate-500 text-sm">Check back later for updates and alerts</p>
+                            <p className="text-slate-500 text-sm">
+                                {filter !== 'all' ? `No ${filter} notifications found` : 'Check back later for updates and alerts'}
+                            </p>
+                            {filter !== 'all' && (
+                                <button
+                                    onClick={() => setFilter('all')}
+                                    className="mt-4 px-4 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 rounded-lg text-sm transition-all"
+                                >
+                                    Show all notifications
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <>
-                            {/* Date Grouping would go here in a real implementation */}
                             {filteredNotifications.map((notification, index) => {
                                 const typeStyles = getTypeStyles(notification.type);
                                 const isExpanded = expandedId === notification.id;
@@ -401,7 +442,7 @@ export default function NotificationsPage() {
                                                             </p>
                                                             
                                                             {/* Expand/Collapse for long messages */}
-                                                            {notification.message.length > 150 && (
+                                                            {notification.message && notification.message.length > 150 && (
                                                                 <button
                                                                     onClick={() => setExpandedId(isExpanded ? null : notification.id)}
                                                                     className="mt-2 text-xs text-cyan-400 hover:text-cyan-300 font-medium"
@@ -415,12 +456,15 @@ export default function NotificationsPage() {
                                                         <div className="flex flex-col items-end gap-2">
                                                             <span className="text-xs text-slate-500 flex items-center gap-1 whitespace-nowrap">
                                                                 <Calendar className="w-3 h-3" />
-                                                                {new Date(notification.created_at).toLocaleDateString(undefined, {
-                                                                    month: 'short',
-                                                                    day: 'numeric',
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit'
-                                                                })}
+                                                                {notification.created_at 
+                                                                    ? new Date(notification.created_at).toLocaleDateString(undefined, {
+                                                                        month: 'short',
+                                                                        day: 'numeric',
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit'
+                                                                    })
+                                                                    : 'Unknown date'
+                                                                }
                                                             </span>
                                                             
                                                             <div className="flex items-center gap-2">
@@ -458,14 +502,14 @@ export default function NotificationsPage() {
                 </div>
 
                 {/* Footer Stats */}
-                {notifications.length > 0 && (
+                {notifications.length > 0 && !isLoading && (
                     <div className="mt-6 pt-4 border-t border-slate-700/50 flex items-center justify-between text-sm">
                         <div className="text-slate-500">
                             Total: {notifications.length} notifications
                         </div>
                         <div className="text-slate-500 flex items-center gap-2">
                             <Mail className="w-3 h-3" />
-                            {unreadCount} unread
+                            Showing: {filteredNotifications.length} of {notifications.length}
                         </div>
                     </div>
                 )}

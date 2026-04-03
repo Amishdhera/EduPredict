@@ -160,7 +160,6 @@ import {
     Paperclip,
     User,
     Calendar,
-    Tag,
     Filter,
     ChevronDown,
     ChevronUp,
@@ -183,6 +182,7 @@ export default function SupportPage() {
     const [expandedTicket, setExpandedTicket] = useState<number | null>(null);
     const [showFilters, setShowFilters] = useState(false);
     const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         loadTickets();
@@ -190,12 +190,17 @@ export default function SupportPage() {
 
     const loadTickets = async () => {
         setIsLoading(true);
+        setError(null);
         try {
             const data = await supportApi.getTickets();
-            setTickets(data);
+            // Ensure data is an array
+            const ticketsArray = Array.isArray(data) ? data : data?.tickets || data?.data || [];
+            setTickets(ticketsArray);
             setLastUpdated(new Date());
-        } catch (err) {
-            console.error(err);
+        } catch (err: any) {
+            console.error('Failed to load tickets:', err);
+            setError(err.message || 'Failed to load tickets');
+            setTickets([]);
         } finally {
             setIsLoading(false);
         }
@@ -206,13 +211,15 @@ export default function SupportPage() {
         if (!formData.subject.trim() || !formData.message.trim()) return;
         
         setSending(true);
+        setError(null);
         try {
             const newTicket = await supportApi.createTicket(formData);
-            setTickets([newTicket, ...tickets]);
+            setTickets(prev => [newTicket, ...(Array.isArray(prev) ? prev : [])]);
             setIsCreating(false);
             setFormData({ subject: '', message: '' });
-        } catch (err) {
-            console.error(err);
+        } catch (err: any) {
+            console.error('Failed to create ticket:', err);
+            setError(err.message || 'Failed to create ticket');
         } finally {
             setSending(false);
         }
@@ -267,9 +274,10 @@ export default function SupportPage() {
         }
     };
 
-    const filteredTickets = tickets.filter(ticket => {
+    // Safely filter tickets - ensure it's an array first
+    const filteredTickets = Array.isArray(tickets) ? tickets.filter(ticket => {
         if (filter !== 'all') {
-            const statusMap = {
+            const statusMap: Record<string, string> = {
                 open: 'Open',
                 in_progress: 'In Progress',
                 resolved: 'Resolved',
@@ -279,19 +287,20 @@ export default function SupportPage() {
         }
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
-            return ticket.subject.toLowerCase().includes(query) ||
-                   ticket.message.toLowerCase().includes(query);
+            return (ticket.subject?.toLowerCase().includes(query) || false) ||
+                   (ticket.message?.toLowerCase().includes(query) || false);
         }
         return true;
-    });
+    }) : [];
 
     const getStatusCounts = () => {
+        const ticketsArray = Array.isArray(tickets) ? tickets : [];
         return {
-            all: tickets.length,
-            open: tickets.filter(t => t.status === 'Open').length,
-            in_progress: tickets.filter(t => t.status === 'In Progress').length,
-            resolved: tickets.filter(t => t.status === 'Resolved').length,
-            closed: tickets.filter(t => t.status === 'Closed').length
+            all: ticketsArray.length,
+            open: ticketsArray.filter(t => t.status === 'Open').length,
+            in_progress: ticketsArray.filter(t => t.status === 'In Progress').length,
+            resolved: ticketsArray.filter(t => t.status === 'Resolved').length,
+            closed: ticketsArray.filter(t => t.status === 'Closed').length
         };
     };
 
@@ -326,10 +335,11 @@ export default function SupportPage() {
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => loadTickets()}
-                                className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all"
+                                disabled={isLoading}
+                                className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all disabled:opacity-50"
                                 title="Refresh"
                             >
-                                <RefreshCw className="w-5 h-5" />
+                                <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
                             </button>
                             
                             <button
@@ -351,6 +361,23 @@ export default function SupportPage() {
                         </div>
                     </div>
                 </div>
+
+                {/* Error Display */}
+                {error && (
+                    <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3 text-red-400">
+                        <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <p className="text-sm font-medium">Error</p>
+                            <p className="text-sm opacity-90">{error}</p>
+                        </div>
+                        <button
+                            onClick={loadTickets}
+                            className="px-3 py-1 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-sm"
+                        >
+                            Retry
+                        </button>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Create Ticket Form */}
@@ -559,16 +586,22 @@ export default function SupportPage() {
                                                     <div className="flex flex-col items-end gap-2">
                                                         <span className="text-xs text-slate-500 flex items-center gap-1 whitespace-nowrap">
                                                             <Calendar className="w-3 h-3" />
-                                                            {new Date(ticket.created_at).toLocaleDateString(undefined, {
-                                                                month: 'short',
-                                                                day: 'numeric',
-                                                                year: 'numeric'
-                                                            })}
+                                                            {ticket.created_at 
+                                                                ? new Date(ticket.created_at).toLocaleDateString(undefined, {
+                                                                    month: 'short',
+                                                                    day: 'numeric',
+                                                                    year: 'numeric'
+                                                                })
+                                                                : 'Unknown date'
+                                                            }
                                                         </span>
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-xs text-slate-500 flex items-center gap-1">
                                                                 <Clock3 className="w-3 h-3" />
-                                                                {new Date(ticket.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                {ticket.created_at 
+                                                                    ? new Date(ticket.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                                    : '--:--'
+                                                                }
                                                             </span>
                                                             {!isExpanded && (
                                                                 <ChevronDown className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
@@ -614,7 +647,7 @@ export default function SupportPage() {
                         )}
                         
                         {/* Contact Support Section */}
-                        {tickets.length > 0 && (
+                        {tickets.length > 0 && !isLoading && (
                             <div className="mt-8 p-4 bg-slate-800/30 rounded-xl border border-slate-700/50">
                                 <div className="flex items-center justify-between flex-wrap gap-4">
                                     <div className="flex items-center gap-3">

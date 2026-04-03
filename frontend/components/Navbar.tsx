@@ -109,7 +109,9 @@ import {
     ChevronDown,
     Sparkles,
     Shield,
-    Zap
+    Zap,
+    Settings,
+    UserCircle
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -117,6 +119,7 @@ export default function Navbar() {
     const { logout, user } = useAuth();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [notifications, setNotifications] = useState(3); // Example notification count
 
     useEffect(() => {
@@ -127,7 +130,38 @@ export default function Navbar() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    // Close profile dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            if (isProfileOpen && !target.closest('.profile-dropdown')) {
+                setIsProfileOpen(false);
+            }
+        };
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, [isProfileOpen]);
+
     const isActive = (path: string) => pathname === path;
+
+    // Get user display name
+    const getUserDisplayName = () => {
+        if (!user) return 'User';
+        // If user has a name property, use it
+        if (user.name) return user.name;
+        // Otherwise extract from email
+        if (user.email) return user.email.split('@')[0];
+        return 'User';
+    };
+
+    const getUserEmail = () => {
+        return user?.email || 'user@example.com';
+    };
+
+    const getUserInitial = () => {
+        const name = getUserDisplayName();
+        return name.charAt(0).toUpperCase();
+    };
 
     const navItems = [
         { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -203,28 +237,86 @@ export default function Navbar() {
                                     <div className="w-px h-6 bg-gradient-to-b from-transparent via-slate-600 to-transparent mx-2" />
 
                                     {/* User Profile Dropdown */}
-                                    <div className="relative ml-2">
-                                        <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-800/50 transition-all group">
+                                    <div className="relative ml-2 profile-dropdown">
+                                        <button
+                                            onClick={() => setIsProfileOpen(!isProfileOpen)}
+                                            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-800/50 transition-all group"
+                                        >
                                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-lg">
-                                                <User className="w-4 h-4 text-white" />
+                                                <span className="text-white text-sm font-medium">
+                                                    {getUserInitial()}
+                                                </span>
                                             </div>
                                             <div className="hidden lg:block text-left">
                                                 <p className="text-sm font-medium text-white">
-                                                    {user?.email?.split('@')[0] || 'User'}
+                                                    {getUserDisplayName()}
                                                 </p>
-                                                <p className="text-xs text-slate-400">Admin</p>
+                                                <p className="text-xs text-slate-400">
+                                                    {user?.role === 'admin' ? 'Administrator' : 'User'}
+                                                </p>
                                             </div>
-                                            <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
+                                            <ChevronDown className={`w-4 h-4 text-slate-400 group-hover:text-white transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
                                         </button>
-                                    </div>
 
-                                    <button
-                                        onClick={logout}
-                                        className="ml-2 px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg text-sm font-medium transition-all flex items-center gap-2 group"
-                                    >
-                                        <LogOut className="w-4 h-4 transition-transform group-hover:scale-110" />
-                                        <span className="hidden lg:inline">Logout</span>
-                                    </button>
+                                        {/* Dropdown Menu */}
+                                        {isProfileOpen && (
+                                            <div className="absolute right-0 mt-2 w-64 bg-slate-800/95 backdrop-blur-md rounded-xl border border-slate-700/50 shadow-xl overflow-hidden animate-slideDown">
+                                                {/* User Info Section */}
+                                                <div className="px-4 py-3 border-b border-slate-700/50">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
+                                                            <span className="text-white text-base font-medium">
+                                                                {getUserInitial()}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-semibold text-white">
+                                                                {getUserDisplayName()}
+                                                            </p>
+                                                            <p className="text-xs text-slate-400">
+                                                                {getUserEmail()}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Menu Items */}
+                                                <div className="py-2">
+                                                    <Link
+                                                        href="/profile"
+                                                        onClick={() => setIsProfileOpen(false)}
+                                                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-700/50 transition-colors"
+                                                    >
+                                                        <UserCircle className="w-4 h-4" />
+                                                        My Profile
+                                                    </Link>
+                                                    <Link
+                                                        href="/settings"
+                                                        onClick={() => setIsProfileOpen(false)}
+                                                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-slate-700/50 transition-colors"
+                                                    >
+                                                        <Settings className="w-4 h-4" />
+                                                        Settings
+                                                    </Link>
+                                                </div>
+
+                                                {/* Divider */}
+                                                <div className="border-t border-slate-700/50"></div>
+
+                                                {/* Logout Button */}
+                                                <button
+                                                    onClick={() => {
+                                                        logout();
+                                                        setIsProfileOpen(false);
+                                                    }}
+                                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                                                >
+                                                    <LogOut className="w-4 h-4" />
+                                                    Logout
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </nav>
 
                                 {/* Mobile Menu Button */}
@@ -250,13 +342,17 @@ export default function Navbar() {
                             {/* User Info */}
                             <div className="flex items-center gap-3 px-3 py-3 mb-2 bg-slate-800/30 rounded-xl">
                                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
-                                    <User className="w-5 h-5 text-white" />
+                                    <span className="text-white text-base font-medium">
+                                        {getUserInitial()}
+                                    </span>
                                 </div>
                                 <div>
                                     <p className="text-sm font-medium text-white">
-                                        {user?.email?.split('@')[0] || 'User'}
+                                        {getUserDisplayName()}
                                     </p>
-                                    <p className="text-xs text-slate-400">{user?.email}</p>
+                                    <p className="text-xs text-slate-400">
+                                        {getUserEmail()}
+                                    </p>
                                 </div>
                             </div>
 
@@ -288,6 +384,24 @@ export default function Navbar() {
                             })}
 
                             <div className="h-px bg-slate-700/50 my-2" />
+
+                            <Link
+                                href="/profile"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all"
+                            >
+                                <UserCircle className="w-5 h-5" />
+                                <span className="font-medium">My Profile</span>
+                            </Link>
+
+                            <Link
+                                href="/settings"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all"
+                            >
+                                <Settings className="w-5 h-5" />
+                                <span className="font-medium">Settings</span>
+                            </Link>
 
                             <button
                                 onClick={() => {
