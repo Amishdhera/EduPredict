@@ -13,6 +13,7 @@ urlpatterns = [
     path('students/<int:pk>/', views.StudentDetailView.as_view(), name='student-detail'),
     path('class-average/', views.ClassAverageView.as_view(), name='class-average'),
     path('health/', views.health_check, name='health-check'),
+    path('login/', views_auth.LoginView.as_view(), name='login'),
     path('register/', views_auth.RegisterView.as_view(), name='register'),
     path('upload/', views.BatchUploadView.as_view(), name='batch-upload'),
 ]

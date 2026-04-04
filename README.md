@@ -3,7 +3,7 @@
 A full-stack application for predicting student dropout risk using machine learning.
 
 
-Dataset Link: https://www.kaggle.com/datasets/thedevastator/higher-education-predictors-of-student-retention
+Dataset Link: c
 
 
 ## Project Structure
@@ -123,7 +123,7 @@ python manage.py createsuperuser
 - **ML**: XGBoost, scikit-learn
 - **Database**: SQLite (default)
 
-
+venv\Scripts\activate
 python -m pip install --upgrade pip
 
 pip install django djangorestframework djangorestframework-simplejwt django-cors-headers numpy pandas scikit-learn joblib xgboost
