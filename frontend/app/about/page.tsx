@@ -106,9 +106,9 @@ export default function AboutPage() {
                         Full Stack Developer
                     </p>
                     <div className="flex items-center justify-center gap-4 text-slate-400 text-sm mb-6 flex-wrap">
-                        <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> India</span>
-                        <span className="flex items-center gap-1"><Mail className="w-4 h-4" /> ameet@edupredict.com</span>
-                        <span className="flex items-center gap-1"><Phone className="w-4 h-4" /> +91 XXXXX XXXXX</span>
+                        <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> Pakistan</span>
+                        <span className="flex items-center gap-1"><Mail className="w-4 h-4" /> amishdhera@gmail.com</span>
+                        <span className="flex items-center gap-1"><Phone className="w-4 h-4" /> 03161103616</span>
                         <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> Available for work</span>
                     </div>
                     
